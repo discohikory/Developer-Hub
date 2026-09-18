@@ -11,6 +11,7 @@
 <title>Developer Hub — Discohikorybrs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://js.puter.com/v2/"></script>
 <style>
 :root{--bg:#04060d;--panel:rgba(15,20,35,.55);--line:rgba(139,92,246,.2);--text:#f5f7ff;--muted:#9da8c5;--a:#8b5cf6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
@@ -71,6 +72,7 @@ footer strong{color:#fff}
     <button class="tab" data-t="task">📋 Tareas</button>
     <button class="tab" data-t="bug">🐛 Bugs</button>
     <button class="tab" data-t="ver">🗂️ Versiones</button>
+    <button class="tab" data-t="ai">🤖 Ayuda IA</button>
   </nav>
   <section class="tool active" id="t-plug">
     <div class="card glass"><h2 class="st">🔌 Plugins esenciales</h2><p class="muted">La base de todo servidor serio + dónde conseguirlos.</p></div>
@@ -108,6 +110,20 @@ footer strong{color:#fff}
       <div class="rowbtns"><button type="button" class="btn primary" id="verAdd">Agregar versión</button></div>
     </div>
     <div id="verList"></div>
+  </section>
+  <section class="tool" id="t-ai">
+    <div class="card glass">
+      <h2 class="st">🤖 Ayuda IA Dev</h2>
+      <p class="muted">Pega tu error, log o duda. Si no está resuelto en esta página, la IA lo depura contigo.</p>
+      <div class="rowbtns">
+        <button type="button" class="btn" data-aiq="Mi plugin tira NullPointerException al iniciar, ¿por dónde empiezo?">Error Java</button>
+        <button type="button" class="btn" data-aiq="Instalé un plugin y el servidor no lo carga, no sale error claro. Pasos para diagnosticar.">Plugin no carga</button>
+        <button type="button" class="btn" data-aiq="El TPS cae a 12 con 30 jugadores, ¿cómo encuentro la causa?">Lag con gente</button>
+      </div>
+      <label style="margin-top:12px">Tu problema<textarea id="aiIn" maxlength="600" placeholder="Pega el error o describe qué pasa, con versiones…"></textarea></label>
+      <div class="rowbtns"><button type="button" class="btn primary" id="aiGo">Preguntar ✨</button></div>
+      <div id="aiOut" style="margin-top:12px"></div>
+    </div>
   </section>
 </main>
 <section style="max-width:1120px;margin:6px auto 0;padding:0 24px">
@@ -191,6 +207,30 @@ document.addEventListener('click',e=>{
   if(b=e.target.closest('[data-td]')){const t=store.get('dev_tasks',[]);t.splice(Number(b.dataset.td),1);store.set('dev_tasks',t);paintTasks();return}
   if(b=e.target.closest('[data-bg]')){const x=store.get('dev_bugs',[]);x[Number(b.dataset.bg)].s=x[Number(b.dataset.bg)].s==='cerrado'?'abierto':'cerrado';store.set('dev_bugs',x);paintBugs();return}
   if(b=e.target.closest('[data-bd]')){const x=store.get('dev_bugs',[]);x.splice(Number(b.dataset.bd),1);store.set('dev_bugs',x);paintBugs();return}
+});
+function aiExtract(r){if(!r)return"";if(typeof r==="string")return r;const m=r.message&&r.message.content;if(typeof m==="string")return m;if(Array.isArray(m))return m.map(p=>typeof p==="string"?p:(p.text||"")).join("");return r.text||r.output||""}
+async function aiChat(prompt){
+  try{if(window.puter&&puter.ai&&puter.ai.chat){const t=aiExtract(await puter.ai.chat(prompt,{model:"gpt-4o"}));if(t&&t.trim())return{text:t.trim(),via:"Puter.js (GPT-4o)"}}}catch(e){console.warn(e)}
+  try{if(window.puter&&puter.ai&&puter.ai.chat){const t=aiExtract(await puter.ai.chat(prompt));if(t&&t.trim())return{text:t.trim(),via:"Puter.js"}}}catch(e){console.warn(e)}
+  const res=await fetch("https://text.pollinations.ai/"+encodeURIComponent(prompt));
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  const t=(await res.text()).trim();if(!t)throw new Error("vacío");
+  return{text:t,via:"Pollinations"};
+}
+function escPre(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
+document.querySelectorAll('[data-aiq]').forEach(b=>b.addEventListener('click',()=>{
+  document.getElementById('aiIn').value=b.dataset.aiq;
+  document.getElementById('aiGo').click();
+}));
+document.getElementById('aiGo').addEventListener('click',()=>{
+  const q=document.getElementById('aiIn').value.trim();
+  const box=document.getElementById('aiOut');
+  if(q.length<8){box.innerHTML='<p class="muted">Describe tu problema con algo de detalle (qué pasa, versiones). ✍️';return}
+  box.innerHTML='<p class="muted">Depurando… ⏳</p>';
+  aiChat(`Eres un desarrollador senior de Minecraft Java/Bedrock (servidores, plugins, configs). Un usuario tiene este problema: "${q}". Responde en español neutro con: 1) causa más probable, 2) pasos numerados para diagnosticar y arreglar, 3) cómo evitarlo. Máximo 180 palabras. Si faltan datos clave (versión, plugin, log), pídelos AL FINAL en una línea.`).then(r=>{
+    box.innerHTML=`<pre class="tpl" style="white-space:pre-wrap;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;font-size:13px;font-family:inherit"></pre><small class="muted">Vía ${r.via} 🤖 · verifica en test antes de tocar producción.</small>`;
+    box.querySelector('pre').textContent=r.text;
+  }).catch(()=>{box.innerHTML='<p class="muted">La IA no responde ahora. Intenta luego. ⚠️</p>'});
 });
 paintTasks();paintBugs();paintVers();
 (function(){
