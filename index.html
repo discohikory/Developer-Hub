@@ -48,6 +48,8 @@ label{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--mute
 .pr-Alta{background:rgba(248,113,113,.15);color:#fca5a5}.pr-Media{background:rgba(251,191,36,.15);color:#fcd34d}.pr-Baja{background:rgba(52,211,153,.15);color:#6ee7b7}
 .kcol h3{font-size:13px;letter-spacing:1px;color:var(--muted);text-align:center}
 .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #22d3ee;color:#67e8f9}
+pre.code{background:#05050f;border:1px solid rgba(103,232,249,.35);border-radius:10px;padding:14px 12px 12px;font-size:12.5px;font-family:monospace;overflow-x:auto;position:relative;margin:10px 0;white-space:pre}
+pre.code button{position:absolute;top:6px;right:6px;font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
 .st-abierto{color:#fbbf24;border-color:#fbbf24}.st-cerrado{color:#34d399;border-color:#34d399}
 footer{text-align:center;padding:34px 20px;color:var(--muted);font-size:12px;border-top:1px solid rgba(255,255,255,.06);margin-top:30px}
 footer strong{color:#fff}
@@ -72,6 +74,7 @@ footer strong{color:#fff}
     <button class="tab" data-t="task">📋 Tareas</button>
     <button class="tab" data-t="bug">🐛 Bugs</button>
     <button class="tab" data-t="ver">🗂️ Versiones</button>
+    <button class="tab" data-t="snip">📦 Snippets</button>
     <button class="tab" data-t="ai">🤖 Ayuda IA</button>
   </nav>
   <section class="tool active" id="t-plug">
@@ -110,6 +113,9 @@ footer strong{color:#fff}
       <div class="rowbtns"><button type="button" class="btn primary" id="verAdd">Agregar versión</button></div>
     </div>
     <div id="verList"></div>
+  </section>
+  <section class="tool" id="t-snip">
+    <div class="card glass"><h2 class="st">📦 Biblioteca de snippets</h2><p class="muted">Código listo para pegar, con botón copiar.</p><div id="snipList"></div></div>
   </section>
   <section class="tool" id="t-ai">
     <div class="card glass">
@@ -231,6 +237,25 @@ document.getElementById('aiGo').addEventListener('click',()=>{
     box.innerHTML=`<pre class="tpl" style="white-space:pre-wrap;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;font-size:13px;font-family:inherit"></pre><small class="muted">Vía ${r.via} 🤖 · verifica en test antes de tocar producción.</small>`;
     box.querySelector('pre').textContent=r.text;
   }).catch(()=>{box.innerHTML='<p class="muted">La IA no responde ahora. Intenta luego. ⚠️</p>'});
+});
+const SNIPS=[
+{t:"Clase principal (JavaPlugin)",l:"java",c:"public class MiPlugin extends JavaPlugin {\n  @Override\n  public void onEnable() {\n    getLogger().info(\"MiPlugin prendido!\");\n  }\n}"},
+{t:"plugin.yml mínimo",l:"yaml",c:"name: MiPlugin\nversion: 1.0.0\nmain: com.ejemplo.MiPlugin\napi-version: 1.20\ncommands:\n  hola:\n    description: Saluda\n    permission: miplugin.hola"},
+{t:"Comando /hola",l:"java",c:"public class HolaCmd implements CommandExecutor {\n  public boolean onCommand(CommandSender s, Command c, String l, String[] a) {\n    s.sendMessage(\"Hola, \" + s.getName());\n    return true;\n  }\n}"},
+{t:"Listener unirse",l:"java",c:"public class Unirse implements Listener {\n  @EventHandler\n  public void alUnirse(PlayerJoinEvent e) {\n    e.getPlayer().sendMessage(\"Bienvenido!\");\n  }\n}"},
+{t:"Leer config",l:"java",c:"saveDefaultConfig();\nString msg = getConfig().getString(\"mensaje\", \"Hola\");"},
+{t:"fetch a una API (JS)",l:"js",c:"const r = await fetch(url);\nif (!r.ok) throw new Error(r.status);\nconst data = await r.json();"},
+{t:"Guardar en localStorage (JS)",l:"js",c:"localStorage.setItem('clave', JSON.stringify(valor));\nconst v = JSON.parse(localStorage.getItem('clave'));"},
+{t:"Grid responsive (CSS)",l:"css",c:".grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));\n  gap: 12px;\n}"},
+{t:"Embed Discord (discord.js)",l:"js",c:"const { EmbedBuilder } = require('discord.js');\nconst e = new EmbedBuilder()\n  .setTitle('Título')\n  .setDescription('Texto')\n  .setColor(0x8b5cf6);"}
+];
+document.getElementById('snipList').innerHTML=SNIPS.map((s,i)=>`<div class="card glass"><h2 class="st">${s.t} <small class="muted">${s.l}</small></h2><pre class="code" id="snc${i}"></pre><div class="rowbtns"><button type="button" class="btn" data-cp="${i}">Copiar 📋</button></div></div>`).join('');
+SNIPS.forEach((s,i)=>{document.getElementById('snc'+i).textContent=s.c});
+document.addEventListener('click',async e=>{
+  const b=e.target.closest?e.target.closest('[data-cp]'):null;
+  if(!b)return;
+  const t=SNIPS[Number(b.dataset.cp)].c;
+  try{await navigator.clipboard.writeText(t);b.textContent='✅';setTimeout(()=>{b.textContent='Copiar 📋'},1500)}catch(err){alert('No se pudo copiar.')}
 });
 paintTasks();paintBugs();paintVers();
 (function(){
